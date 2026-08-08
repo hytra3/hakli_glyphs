@@ -154,7 +154,7 @@
     
     <!-- ============================================ -->
     <!-- CACHE-BUSTING: When updating, change v=XXXXXX in ALL script tags below to match APP_VERSION -->
-    <!-- Current version: v260808a --> 
+    <!-- Current version: v260808b --> 
     <!-- ============================================ -->
     
     <!-- Recognition modules -->
@@ -170,18 +170,18 @@
     <script src="src/reading/transcription.js"></script>
     
     <!-- UI Components (loaded as Babel) -->
-    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260808a"></script>
-    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260808a"></script>
-    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260808a"></script>
-    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260808a"></script>
-    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260808a"></script>
-    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260808a"></script>
-    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260808a"></script>
-    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260808a"></script>
+    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260808b"></script>
+    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260808b"></script>
+    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260808b"></script>
+    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260808b"></script>
+    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260808b"></script>
+    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260808b"></script>
+    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260808b"></script>
+    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260808b"></script>
 
     <!-- Main Application -->
     <script type="text/babel">
-        const APP_VERSION = 'v260808a';
+        const APP_VERSION = 'v260808b';
         console.log('🚀 Hakli Glyph Recognizer ' + APP_VERSION + ' (Transcription Syncs with Reading Order!)');
 
         function HakliGlyphRecognizer() {
@@ -2251,7 +2251,9 @@
                 
                 results.forEach(({ result: r, idx }) => {
                     translitText += r.glyph.transliteration || r.glyph.name;
-                    arabicText += r.glyph.arabic || r.glyph.name;
+                    // Wrap each Arabic glyph in <bdi> so Latin 'x' placeholders don't get
+                    // bidi-reordered out of reading sequence in the RTL booklet.
+                    arabicText += '<bdi>' + (r.glyph.arabic || r.glyph.name) + '</bdi>';
                     if (wordBoundaries.has(idx)) {
                         translitText += ' ';
                         arabicText += ' ';

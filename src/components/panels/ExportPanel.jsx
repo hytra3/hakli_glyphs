@@ -115,7 +115,7 @@ const ExportPanel = ({
             if (!result) return;
             
             const char = script === 'arabic' 
-                ? (result.glyph.arabic || result.glyph.transliteration || result.glyph.name)
+                ? '<bdi>' + (result.glyph.arabic || result.glyph.transliteration || result.glyph.name) + '</bdi>'
                 : (result.glyph.transliteration || result.glyph.name);
             
             currentWord.push(char);
