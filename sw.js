@@ -1,7 +1,7 @@
 // Hakli Glyph Recognizer - Service Worker
-// Version 260805a - Network First for same-origin app code (no more stale .js)
+// Version 260808a - Network First for same-origin app code (no more stale .js)
 
-const CACHE_VERSION = 'v260805a';
+const CACHE_VERSION = 'v260808a';
 const CACHE_NAME = `hakli-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `hakli-runtime-${CACHE_VERSION}`;
 

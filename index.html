@@ -154,7 +154,7 @@
     
     <!-- ============================================ -->
     <!-- CACHE-BUSTING: When updating, change v=XXXXXX in ALL script tags below to match APP_VERSION -->
-    <!-- Current version: v260805a --> 
+    <!-- Current version: v260808a --> 
     <!-- ============================================ -->
     
     <!-- Recognition modules -->
@@ -170,18 +170,18 @@
     <script src="src/reading/transcription.js"></script>
     
     <!-- UI Components (loaded as Babel) -->
-    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260805a"></script>
-    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260805a"></script>
-    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260805a"></script>
-    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260805a"></script>
-    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260805a"></script>
-    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260805a"></script>
-    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260805a"></script>
-    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260805a"></script>
+    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260808a"></script>
+    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260808a"></script>
+    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260808a"></script>
+    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260808a"></script>
+    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260808a"></script>
+    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260808a"></script>
+    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260808a"></script>
+    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260808a"></script>
 
     <!-- Main Application -->
     <script type="text/babel">
-        const APP_VERSION = 'v260805a';
+        const APP_VERSION = 'v260808a';
         console.log('🚀 Hakli Glyph Recognizer ' + APP_VERSION + ' (Transcription Syncs with Reading Order!)');
 
         function HakliGlyphRecognizer() {
@@ -2159,10 +2159,24 @@
                     .map(idx => recognitionResults[idx])
                     .filter(Boolean);
             }, [viewMode, readingOrder, recognitionResults, excludedDetections, confidenceThreshold]);
+
+            // Same ordering/filtering as getReadingOrderedResults, but carries each glyph's
+            // TRUE detection index so break lookups stay correct even when glyphs are filtered.
+            const getReadingOrderedPairs = useCallback(() => {
+                if (viewMode !== 'reading' || readingOrder.length === 0) {
+                    return recognitionResults
+                        .map((result, idx) => ({ result, idx }))
+                        .filter(p => Math.round(p.result.confidence * 100) >= confidenceThreshold);
+                }
+                return readingOrder
+                    .filter(idx => !excludedDetections.has(idx) && Math.round(recognitionResults[idx]?.confidence * 100) >= confidenceThreshold)
+                    .map(idx => ({ result: recognitionResults[idx], idx }))
+                    .filter(p => p.result);
+            }, [viewMode, readingOrder, recognitionResults, excludedDetections, confidenceThreshold]);
             
             const copyTranscriptionToClipboard = useCallback(() => {
-                const results = getReadingOrderedResults();
-                const text = results.map((r, idx) => {
+                const results = getReadingOrderedPairs();
+                const text = results.map(({ result: r, idx }) => {
                     let char = showArabicLabels 
                         ? (r.glyph.arabic || r.glyph.name)
                         : (r.glyph.transliteration || r.glyph.name);
@@ -2180,11 +2194,11 @@
             }, [getReadingOrderedResults, showArabicLabels, wordBoundaries, lineBreaks]);
             
             const exportTranscription = useCallback(() => {
-                const results = getReadingOrderedResults();
+                const results = getReadingOrderedPairs();
                 let translitText = '';
                 let arabicText = '';
                 
-                results.forEach((r, idx) => {
+                results.forEach(({ result: r, idx }) => {
                     translitText += r.glyph.transliteration || r.glyph.name;
                     arabicText += r.glyph.arabic || r.glyph.name;
                     if (wordBoundaries.has(idx)) {
@@ -2231,11 +2245,11 @@
             
             // ========== BOOKLET GENERATION ==========
             const generateHtmlBooklet = useCallback(() => {
-                const results = getReadingOrderedResults();
+                const results = getReadingOrderedPairs();
                 let translitText = '';
                 let arabicText = '';
                 
-                results.forEach((r, idx) => {
+                results.forEach(({ result: r, idx }) => {
                     translitText += r.glyph.transliteration || r.glyph.name;
                     arabicText += r.glyph.arabic || r.glyph.name;
                     if (wordBoundaries.has(idx)) {
@@ -2457,11 +2471,11 @@
                 const margin = 15;
                 const contentWidth = pageWidth - (margin * 2);
                 
-                const results = getReadingOrderedResults();
+                const results = getReadingOrderedPairs();
                 let translitText = '';
                 let arabicText = '';
                 
-                results.forEach((r, idx) => {
+                results.forEach(({ result: r, idx }) => {
                     translitText += r.glyph.transliteration || r.glyph.name;
                     arabicText += r.glyph.arabic || r.glyph.name;
                     if (wordBoundaries.has(idx)) {
@@ -5290,9 +5304,8 @@
                                                 // Split into columns based on line breaks OR column breaks
                                                 const columns = [];
                                                 let currentColumn = [];
-                                                const results = getReadingOrderedResults();
-                                                results.forEach((result, index) => {
-                                                    const actualIdx = readingOrder[index] ?? index;
+                                                const results = getReadingOrderedPairs();
+                                                results.forEach(({ result, idx: actualIdx }, index) => {
                                                     const hasWordBoundary = wordBoundaries.has(actualIdx);
                                                     currentColumn.push({ result, index, actualIdx, hasWordBoundary });
                                                     // Split column on LINE break or COLUMN break
@@ -5347,18 +5360,18 @@
                                                 textAlign: transcriptionFormat === 'horizontal-rtl' ? 'right' : 'left'
                                             }}
                                         >
-                                            {getReadingOrderedResults().map((result, index) => (
+                                            {getReadingOrderedPairs().map(({ result, idx }, index, arr) => (
                                                 <span key={`horiz-${index}`}>
-                                                    <span className="text-gray-900">
+                                                    <bdi className="text-gray-900">
                                                         {transcriptionScript === 'arabic'
                                                             ? (result.glyph.arabic || result.glyph.name)
                                                             : (result.glyph.transliteration || result.glyph.name)
                                                         }
-                                                    </span>
-                                                    {lineBreaks.has(readingOrder[index] ?? index) && <span className="text-ancient-purple font-bold mx-2">⏎<br/></span>}
-                                                    {!lineBreaks.has(readingOrder[index] ?? index) && columnBreaks.has(readingOrder[index] ?? index) && <span className="text-amber-700 font-bold mx-1">‖</span>}
-                                                    {!lineBreaks.has(readingOrder[index] ?? index) && !columnBreaks.has(readingOrder[index] ?? index) && wordBoundaries.has(readingOrder[index] ?? index) && <span className="text-amber-700 font-bold mx-1">|</span>}
-                                                    {!lineBreaks.has(readingOrder[index] ?? index) && !columnBreaks.has(readingOrder[index] ?? index) && !wordBoundaries.has(readingOrder[index] ?? index) && index < getReadingOrderedResults().length - 1 && <span className="text-gray-400">·</span>}
+                                                    </bdi>
+                                                    {lineBreaks.has(idx) && <span className="text-ancient-purple font-bold mx-2">⏎<br/></span>}
+                                                    {!lineBreaks.has(idx) && columnBreaks.has(idx) && <span className="text-amber-700 font-bold mx-1">‖</span>}
+                                                    {!lineBreaks.has(idx) && !columnBreaks.has(idx) && wordBoundaries.has(idx) && <span className="text-amber-700 font-bold mx-1">|</span>}
+                                                    {!lineBreaks.has(idx) && !columnBreaks.has(idx) && !wordBoundaries.has(idx) && index < arr.length - 1 && <span className="text-gray-400">·</span>}
                                                 </span>
                                             ))}
                                         </div>
