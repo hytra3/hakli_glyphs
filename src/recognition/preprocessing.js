@@ -25,9 +25,14 @@ const Preprocessing = {
                 processed = rotated;
             }
 
-            // 2. Convert to grayscale if needed
+            // 2. Convert to grayscale — OR extract the pigment channel for color isolation.
+            // Color isolation (decorrelation stretch on the Lab a* red–green axis) separates red
+            // ochre glyphs from textured rock far better than luminance, since rock texture is
+            // mostly a brightness variation and barely registers on the colour axis.
             let gray = new cv.Mat();
-            if (processed.channels() > 1) {
+            if (settings.colorIsolation && processed.channels() > 1) {
+                gray = Preprocessing.extractPigmentChannel(processed, settings.colorStrength);
+            } else if (processed.channels() > 1) {
                 cv.cvtColor(processed, gray, cv.COLOR_RGBA2GRAY);
             } else {
                 gray = processed.clone();
@@ -108,6 +113,59 @@ const Preprocessing = {
             if (processed) processed.delete();
             throw error;
         }
+    },
+
+    /**
+     * Extract a "pigment" channel that isolates coloured glyphs (default: red ochre) from
+     * textured rock, using the Lab a* (red–green) axis with a decorrelation-style contrast
+     * stretch. Returns a single-channel Mat where pigment is DARK (matching the ink-on-light
+     * convention the rest of the pipeline expects).
+     * @param {cv.Mat} mat - source colour Mat (RGBA or RGB)
+     * @param {number} strength - 0..100, how aggressively to stretch the colour separation
+     * @returns {cv.Mat} single-channel 8-bit Mat
+     */
+    extractPigmentChannel: (mat, strength) => {
+        // Normalise to 3-channel RGB
+        const rgb = new cv.Mat();
+        if (mat.channels() === 4) {
+            cv.cvtColor(mat, rgb, cv.COLOR_RGBA2RGB);
+        } else if (mat.channels() === 3) {
+            mat.copyTo(rgb);
+        } else {
+            rgb.delete();
+            return mat.clone(); // already single channel — nothing to isolate
+        }
+
+        // Convert to CIE Lab; the a* channel is the red(+)/green(-) axis
+        const lab = new cv.Mat();
+        cv.cvtColor(rgb, lab, cv.COLOR_RGB2Lab);
+        rgb.delete();
+
+        const channels = new cv.MatVector();
+        cv.split(lab, channels);
+        lab.delete();
+        const L = channels.get(0);
+        const a = channels.get(1); // a* — red pigment sits high, neutral rock near 128
+        const b = channels.get(2);
+
+        // Decorrelation-style stretch: expand contrast about the neutral point (128).
+        // gain ranges 1 (no stretch) → ~4 (aggressive), driven by strength.
+        const s = Math.max(0, Math.min(100, (typeof strength === 'number' ? strength : 50)));
+        const gain = 1 + (s / 100) * 3;
+        const stretched = new cv.Mat();
+        // convertTo computes: dst = a*gain + (128 - 128*gain) = (a - 128)*gain + 128  (saturated 0..255)
+        a.convertTo(stretched, cv.CV_8U, gain, 128 - 128 * gain);
+
+        L.delete();
+        a.delete();
+        b.delete();
+        channels.delete();
+
+        // Red pigment is now bright; invert so pigment is dark (ink-on-light convention)
+        const out = new cv.Mat();
+        cv.bitwise_not(stretched, out);
+        stretched.delete();
+        return out;
     },
 
     /**

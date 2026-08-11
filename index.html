@@ -154,7 +154,7 @@
     
     <!-- ============================================ -->
     <!-- CACHE-BUSTING: When updating, change v=XXXXXX in ALL script tags below to match APP_VERSION -->
-    <!-- Current version: v260811d --> 
+    <!-- Current version: v260811e --> 
     <!-- ============================================ -->
     
     <!-- Recognition modules -->
@@ -170,18 +170,18 @@
     <script src="src/reading/transcription.js"></script>
     
     <!-- UI Components (loaded as Babel) -->
-    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811d"></script>
-    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811d"></script>
-    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811d"></script>
-    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811d"></script>
-    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811d"></script>
-    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811d"></script>
-    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811d"></script>
-    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811d"></script>
+    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811e"></script>
+    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811e"></script>
+    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811e"></script>
+    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811e"></script>
+    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811e"></script>
+    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811e"></script>
+    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811e"></script>
+    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811e"></script>
 
     <!-- Main Application -->
     <script type="text/babel">
-        const APP_VERSION = 'v260811d';
+        const APP_VERSION = 'v260811e';
         console.log('🚀 Hakli Glyph Recognizer ' + APP_VERSION + ' (Transcription Syncs with Reading Order!)');
 
         function HakliGlyphRecognizer() {
@@ -458,7 +458,9 @@
                 constantOffset: 2,
                 gaussianBlur: 0,
                 morphologyOperation: 'none',
-                invertColors: false
+                invertColors: false,
+                colorIsolation: false,
+                colorStrength: 50
             });
             
             // Crop mode state (one-shot operation)
@@ -1011,7 +1013,7 @@
                 setFileOwner(null);
                 setIsReadOnly(false);
                 // Reset preprocessing to defaults
-                setPreprocessing({ rotation: 0, gaussianBlur: 0, useAdaptiveThreshold: false, blockSize: 11, constantOffset: 2, morphologyOperation: 'none', invertColors: false });
+                setPreprocessing({ rotation: 0, gaussianBlur: 0, useAdaptiveThreshold: false, blockSize: 11, constantOffset: 2, morphologyOperation: 'none', invertColors: false, colorIsolation: false, colorStrength: 50 });
                 setLocalSaveTime(null);
                 
                 const reader = new FileReader();
@@ -1229,7 +1231,9 @@
                     constantOffset: 2,
                     gaussianBlur: 0,
                     morphologyOperation: 'none',
-                    invertColors: false
+                    invertColors: false,
+                    colorIsolation: false,
+                    colorStrength: 50
                 });
 
                 if (recognitionResults.length === 0) {
@@ -3696,6 +3700,24 @@
                                                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
                                             </div>
                                             <div className="flex items-center justify-between">
+                                                <span className="text-xs text-gray-600">🎨 Color Isolation</span>
+                                                <button onClick={() => setPreprocessing(p => ({ ...p, colorIsolation: !p.colorIsolation }))}
+                                                    className={`w-10 h-5 rounded-full transition-colors ${preprocessing.colorIsolation ? 'bg-patina' : 'bg-gray-300'}`}>
+                                                    <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${preprocessing.colorIsolation ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                                </button>
+                                            </div>
+                                            {preprocessing.colorIsolation && (
+                                                <div>
+                                                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                                        <span>Strength</span><span>{preprocessing.colorStrength}</span>
+                                                    </div>
+                                                    <input type="range" min="0" max="100" value={preprocessing.colorStrength}
+                                                        onChange={(e) => setPreprocessing(p => ({ ...p, colorStrength: parseInt(e.target.value) }))}
+                                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                                                    <p className="text-[10px] text-gray-400 mt-0.5">Separates red glyphs from rock. Pair with Adaptive Threshold + Morphology → Open.</p>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center justify-between">
                                                 <span className="text-xs text-gray-600">Adaptive Threshold</span>
                                                 <button onClick={() => setPreprocessing(p => ({ ...p, useAdaptiveThreshold: !p.useAdaptiveThreshold }))}
                                                     className={`w-10 h-5 rounded-full transition-colors ${preprocessing.useAdaptiveThreshold ? 'bg-patina' : 'bg-gray-300'}`}>
@@ -4166,7 +4188,7 @@
                                                         setCurrentFileId(null);
                                                         setFileOwner(null);
                                                         setIsReadOnly(false);
-                                                        setPreprocessing({ rotation: 0, gaussianBlur: 0, useAdaptiveThreshold: false, blockSize: 11, constantOffset: 2, morphologyOperation: 'none', invertColors: false });
+                                                        setPreprocessing({ rotation: 0, gaussianBlur: 0, useAdaptiveThreshold: false, blockSize: 11, constantOffset: 2, morphologyOperation: 'none', invertColors: false, colorIsolation: false, colorStrength: 50 });
                                                         setLocalSaveTime(null);
                                                         setCanvasZoom(1);
                                                         
@@ -4272,6 +4294,25 @@
                                                     <div className="flex justify-between text-gray-600 mb-1"><span>🌫️ Blur</span><span>{preprocessing.gaussianBlur}</span></div>
                                                     <input type="range" min="0" max="15" step="2" value={preprocessing.gaussianBlur}
                                                         onChange={(e) => setPreprocessing(p => ({ ...p, gaussianBlur: parseInt(e.target.value) }))} className="w-full" />
+                                                </div>
+                                                
+                                                {/* Color Isolation (decorrelation stretch) — for red-pigment field photos */}
+                                                <div className="p-2 bg-gray-50 rounded space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-gray-700" title="Isolate red pigment (ochre) from textured rock using a decorrelation stretch — for colour field photos">🎨 Color Isolation</span>
+                                                        <button onClick={() => setPreprocessing(p => ({ ...p, colorIsolation: !p.colorIsolation }))}
+                                                            className={`w-10 h-5 rounded-full ${preprocessing.colorIsolation ? 'bg-ancient-purple' : 'bg-gray-300'}`}>
+                                                            <div className={`w-4 h-4 bg-white rounded-full shadow transform ${preprocessing.colorIsolation ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                                        </button>
+                                                    </div>
+                                                    {preprocessing.colorIsolation && (
+                                                        <div>
+                                                            <div className="flex justify-between text-xs text-gray-500 mb-1"><span>Strength</span><span>{preprocessing.colorStrength}</span></div>
+                                                            <input type="range" min="0" max="100" value={preprocessing.colorStrength}
+                                                                onChange={(e) => setPreprocessing(p => ({ ...p, colorStrength: parseInt(e.target.value) }))} className="w-full" />
+                                                            <p className="text-[10px] text-gray-400 mt-0.5">Separates red glyphs from rock. Best paired with Adaptive Threshold + Morphology → Open.</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 
                                                 {/* Adaptive Threshold */}
@@ -6845,7 +6886,7 @@
                                 setCurrentFileId(null);
                                 setFileOwner(null);
                                 setIsReadOnly(false);
-                                setPreprocessing({ rotation: 0, gaussianBlur: 0, useAdaptiveThreshold: false, blockSize: 11, constantOffset: 2, morphologyOperation: 'none', invertColors: false });
+                                setPreprocessing({ rotation: 0, gaussianBlur: 0, useAdaptiveThreshold: false, blockSize: 11, constantOffset: 2, morphologyOperation: 'none', invertColors: false, colorIsolation: false, colorStrength: 50 });
                                 setLocalSaveTime(null);
                                 setCanvasZoom(1);
                                 
