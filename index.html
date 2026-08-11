@@ -154,7 +154,7 @@
     
     <!-- ============================================ -->
     <!-- CACHE-BUSTING: When updating, change v=XXXXXX in ALL script tags below to match APP_VERSION -->
-    <!-- Current version: v260811b --> 
+    <!-- Current version: v260811c --> 
     <!-- ============================================ -->
     
     <!-- Recognition modules -->
@@ -170,18 +170,18 @@
     <script src="src/reading/transcription.js"></script>
     
     <!-- UI Components (loaded as Babel) -->
-    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811b"></script>
-    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811b"></script>
-    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811b"></script>
-    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811b"></script>
-    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811b"></script>
-    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811b"></script>
-    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811b"></script>
-    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811b"></script>
+    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811c"></script>
+    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811c"></script>
+    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811c"></script>
+    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811c"></script>
+    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811c"></script>
+    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811c"></script>
+    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811c"></script>
+    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811c"></script>
 
     <!-- Main Application -->
     <script type="text/babel">
-        const APP_VERSION = 'v260811b';
+        const APP_VERSION = 'v260811c';
         console.log('🚀 Hakli Glyph Recognizer ' + APP_VERSION + ' (Transcription Syncs with Reading Order!)');
 
         function HakliGlyphRecognizer() {
@@ -467,6 +467,7 @@
             
             const [opencvReady, setOpencvReady] = useState(false);
             const originalMatRef = useRef(null);
+            const pristineImageRef = useRef(null); // the originally-uploaded image, never overwritten by crop/eraser — used by Revert
             const preprocessedMatRef = useRef(null);
             
             // Track dimensions of the image used for recognition (for box alignment)
@@ -560,6 +561,7 @@
                                     // Restore the saved data
                                     const data = saved.data;
                                     if (data.image) setOriginalImage(data.image);
+                                    pristineImageRef.current = data.images?.original || data.image;
                                     if (data.displayImage) setDisplayImage(data.displayImage);
                                     if (data.recognitionResults) setRecognitionResults(data.recognitionResults);
                                     if (data.validations) setValidations(data.validations);
@@ -1015,6 +1017,7 @@
                     const dataUrl = e.target.result;
                     setOriginalImage(dataUrl);
                     setDisplayImage(dataUrl);
+                    pristineImageRef.current = dataUrl;
                     
                     if (opencvReady) {
                         try {
@@ -1162,26 +1165,48 @@
                 }
             }, [preprocessing, opencvReady, matToDataUrl]);
             
-            const resetPreprocessing = useCallback(() => {
-                // If there are active detections, warn user
+            const resetPreprocessing = useCallback(async () => {
+                // Revert restores the ORIGINAL uploaded image — undoing crop, erase, and filters.
                 if (recognitionResults.length > 0) {
                     const confirmed = confirm(
-                        '⚠️ Resetting will misalign detection boxes since they were positioned on the preprocessed image.\n\n' +
-                        'Options:\n' +
-                        '• OK - Reset anyway (boxes may not align)\n' +
-                        '• Cancel - Keep current preprocessing\n\n' +
-                        'Tip: Clear detections first, or re-run recognition after reset.'
+                        '↺ Revert to the original uploaded image?\n\n' +
+                        'This undoes crop, erase, and all filter settings.\n\n' +
+                        'Detection boxes were positioned on the preprocessed image and may misalign.\n\n' +
+                        '• OK - Revert anyway\n' +
+                        '• Cancel - Keep current image'
                     );
                     if (!confirmed) return;
                 }
-                
-                // Clear preprocessed mat first
+
+                const pristine = pristineImageRef.current || originalImage;
+                if (!pristine) return;
+
+                // Clear preprocessed mat
                 if (preprocessedMatRef.current) {
                     preprocessedMatRef.current.delete();
                     preprocessedMatRef.current = null;
                 }
-                
-                // Reset preprocessing settings
+
+                // Rebuild the OpenCV mat from the pristine image FIRST, so the auto-apply
+                // effect (and any later crop/filter) operates on the restored image, not a stale one.
+                if (opencvReady) {
+                    try {
+                        if (originalMatRef.current) originalMatRef.current.delete();
+                        originalMatRef.current = await loadImageToMat(pristine);
+                    } catch (e) {
+                        console.error('Revert: failed to rebuild mat from pristine image', e);
+                    }
+                }
+
+                setCropMode(false);
+                setCropSelection(null);
+                setEraserMode(false);
+
+                // Restore the image everywhere
+                setOriginalImage(pristine);
+                setDisplayImage(pristine);
+
+                // Reset filter settings to defaults (auto-apply effect will re-run on the fresh mat)
                 setPreprocessing({
                     rotation: 0,
                     useAdaptiveThreshold: false,
@@ -1191,25 +1216,12 @@
                     morphologyOperation: 'none',
                     invertColors: false
                 });
-                
-                setCropMode(false);
-                setCropSelection(null);
-                
-                // Use setTimeout to ensure preprocessing state update completes first
-                // This prevents race conditions where old preprocessing gets reapplied
-                setTimeout(() => {
-                    if (originalImage) {
-                        setDisplayImage(originalImage);
-                        console.log('✅ Reset to original image');
-                    }
-                }, 0);
-                
-                // Only reset recognitionSourceDims if no detections
-                // Otherwise keep it so boxes at least scale consistently
+
                 if (recognitionResults.length === 0) {
                     setRecognitionSourceDims(null);
                 }
-            }, [originalImage, recognitionResults.length]);
+                console.log('↺ Reverted to original uploaded image');
+            }, [originalImage, recognitionResults.length, opencvReady]);
             
             // ========== START NEW INSCRIPTION ==========
             const startNewInscription = useCallback(() => {
@@ -3781,13 +3793,14 @@
                                         </div>
                                     )}
                                     
-                                    {/* Apply/Reset Buttons - Mobile (hidden in eraser mode; Apply Eraser commits there) */}
+                                    {/* Revert — restores the original uploaded image (filters apply live, so no Apply needed) */}
                                     {!eraserMode && originalImage && (
                                         <div className="bg-gray-50 rounded-lg p-3">
-                                            <div className="flex gap-2">
-                                                <button onClick={resetPreprocessing} className="flex-1 px-2 py-1.5 bg-gray-200 rounded text-sm">↩️ Reset</button>
-                                                <button onClick={applyPreprocessing} className="flex-1 px-2 py-1.5 bg-patina text-white rounded text-sm">✅ Apply</button>
-                                            </div>
+                                            <button onClick={resetPreprocessing}
+                                                className="w-full px-2 py-1.5 bg-gray-200 text-gray-600 rounded text-sm flex items-center justify-center gap-1.5"
+                                                title="Restore the original uploaded image — undoes crop, erase, and filters">
+                                                <span className="text-base leading-none">↺</span> Revert to original
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -4106,6 +4119,7 @@
                                                         
                                                         // Now restore state from HKI file
                                                         if (data.image) setOriginalImage(data.image);
+                                                        pristineImageRef.current = data.images?.original || data.image;
                                                         if (data.displayImage) setDisplayImage(data.displayImage);
                                                         if (data.preprocessing) setPreprocessing(data.preprocessing);
                                                         if (data.recognitionResults) setRecognitionResults(data.recognitionResults);
@@ -4306,16 +4320,13 @@
                                                     )}
                                                 </div>
                                                 
-                                                {/* Buttons — hidden in eraser mode (Apply Eraser is the commit action there) */}
+                                                {/* Revert — restores the original uploaded image (filters apply live, so no Apply needed) */}
                                                 {!eraserMode && (
-                                                <div className="flex gap-2 pt-2">
-                                                    <button onClick={resetPreprocessing} 
-                                                        className="flex-1 px-2 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-sm border border-gray-300">
-                                                        ↩️ Reset
-                                                    </button>
-                                                    <button onClick={applyPreprocessing} disabled={!opencvReady}
-                                                        className="flex-1 px-2 py-1.5 bg-patina hover:bg-[#5a7d6e] text-white rounded text-sm font-medium disabled:bg-gray-300">
-                                                        ✅ Apply
+                                                <div className="pt-2">
+                                                    <button onClick={resetPreprocessing}
+                                                        className="w-full px-2 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 rounded text-sm border border-gray-200 flex items-center justify-center gap-1.5 transition-colors"
+                                                        title="Restore the original uploaded image — undoes crop, erase, and filters">
+                                                        <span className="text-base leading-none">↺</span> Revert to original
                                                     </button>
                                                 </div>
                                                 )}
@@ -5604,6 +5615,7 @@
                                                 
                                                 // Load all data into state
                                                 if (data.image) setOriginalImage(data.image);
+                                                pristineImageRef.current = data.images?.original || data.image;
                                                 if (data.displayImage) setDisplayImage(data.displayImage);
                                                 if (data.images?.original) setOriginalImage(data.images.original);
                                                 if (data.images?.preprocessed) setDisplayImage(data.images.preprocessed);
@@ -6478,6 +6490,7 @@
                                                 // Load the data
                                                 const data = pendingHkiData;
                                                 if (data.image) setOriginalImage(data.image);
+                                                pristineImageRef.current = data.images?.original || data.image;
                                                 if (data.displayImage) setDisplayImage(data.displayImage);
                                                 if (data.images?.original) setOriginalImage(data.images.original);
                                                 if (data.images?.preprocessed) setDisplayImage(data.images.preprocessed);
@@ -6542,6 +6555,7 @@
                                                     // Load in read-only mode
                                                     const data = pendingHkiData;
                                                     if (data.image) setOriginalImage(data.image);
+                                                    pristineImageRef.current = data.images?.original || data.image;
                                                     if (data.displayImage) setDisplayImage(data.displayImage);
                                                     if (data.images?.original) setOriginalImage(data.images.original);
                                                     if (data.images?.preprocessed) setDisplayImage(data.images.preprocessed);
