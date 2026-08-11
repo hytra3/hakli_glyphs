@@ -154,7 +154,7 @@
     
     <!-- ============================================ -->
     <!-- CACHE-BUSTING: When updating, change v=XXXXXX in ALL script tags below to match APP_VERSION -->
-    <!-- Current version: v260808b --> 
+    <!-- Current version: v260811a --> 
     <!-- ============================================ -->
     
     <!-- Recognition modules -->
@@ -170,18 +170,18 @@
     <script src="src/reading/transcription.js"></script>
     
     <!-- UI Components (loaded as Babel) -->
-    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260808b"></script>
-    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260808b"></script>
-    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260808b"></script>
-    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260808b"></script>
-    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260808b"></script>
-    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260808b"></script>
-    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260808b"></script>
-    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260808b"></script>
+    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811a"></script>
+    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811a"></script>
+    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811a"></script>
+    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811a"></script>
+    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811a"></script>
+    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811a"></script>
+    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811a"></script>
+    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811a"></script>
 
     <!-- Main Application -->
     <script type="text/babel">
-        const APP_VERSION = 'v260808b';
+        const APP_VERSION = 'v260811a';
         console.log('🚀 Hakli Glyph Recognizer ' + APP_VERSION + ' (Transcription Syncs with Reading Order!)');
 
         function HakliGlyphRecognizer() {
@@ -4411,7 +4411,7 @@
                                                     {/* Regular image display (hidden when eraser active) */}
                                                     <img ref={imageRef} src={displayImage} alt="Inscription" 
                                                         className="max-w-full max-h-full object-contain block"
-                                                        style={{ pointerEvents: eraserMode || manualBoxMode ? 'none' : 'auto' }}
+                                                        style={{ pointerEvents: eraserMode || manualBoxMode || cropMode ? 'none' : 'auto' }}
                                                     />
                                             
                                             {/* Manual Box Drawing Overlay */}
@@ -4535,7 +4535,8 @@
                                                             left: imgOffsetX + result.position.x * scaleX,
                                                             top: imgOffsetY + result.position.y * scaleY,
                                                             width: result.position.width * scaleX,
-                                                            height: result.position.height * scaleY
+                                                            height: result.position.height * scaleY,
+                                                            pointerEvents: (cropMode || manualBoxMode) ? 'none' : undefined
                                                         }}
                                                         onClick={() => setSelectedRegions(prev => {
                                                             const next = new Set(prev);
@@ -5048,7 +5049,8 @@
                                                         left: imgOffsetX + result.position.x * scaleX,
                                                         top: imgOffsetY + result.position.y * scaleY,
                                                         width: result.position.width * scaleX,
-                                                        height: result.position.height * scaleY
+                                                        height: result.position.height * scaleY,
+                                                        pointerEvents: (cropMode || manualBoxMode) ? 'none' : undefined
                                                     }}
                                                     onClick={() => setSelectedRegions(prev => {
                                                         const next = new Set(prev);
