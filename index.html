@@ -154,7 +154,7 @@
     
     <!-- ============================================ -->
     <!-- CACHE-BUSTING: When updating, change v=XXXXXX in ALL script tags below to match APP_VERSION -->
-    <!-- Current version: v260811a --> 
+    <!-- Current version: v260811b --> 
     <!-- ============================================ -->
     
     <!-- Recognition modules -->
@@ -170,18 +170,18 @@
     <script src="src/reading/transcription.js"></script>
     
     <!-- UI Components (loaded as Babel) -->
-    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811a"></script>
-    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811a"></script>
-    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811a"></script>
-    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811a"></script>
-    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811a"></script>
-    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811a"></script>
-    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811a"></script>
-    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811a"></script>
+    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811b"></script>
+    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811b"></script>
+    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811b"></script>
+    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811b"></script>
+    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811b"></script>
+    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811b"></script>
+    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811b"></script>
+    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811b"></script>
 
     <!-- Main Application -->
     <script type="text/babel">
-        const APP_VERSION = 'v260811a';
+        const APP_VERSION = 'v260811b';
         console.log('🚀 Hakli Glyph Recognizer ' + APP_VERSION + ' (Transcription Syncs with Reading Order!)');
 
         function HakliGlyphRecognizer() {
@@ -4357,8 +4357,8 @@
                                     {displayImage ? (
                                         <div ref={imageContainerRef} 
                                             className="relative flex-1 overflow-auto"
-                                            style={{ cursor: (manualBoxMode || cropMode) ? 'crosshair' : 'default' }}
-                                            onMouseDown={cropMode ? handleCropStart : (manualBoxMode ? handleManualBoxStart : undefined)}
+                                            style={{ cursor: (manualBoxMode || cropMode) ? 'crosshair' : 'default', userSelect: (manualBoxMode || cropMode || eraserMode) ? 'none' : undefined, WebkitUserSelect: (manualBoxMode || cropMode || eraserMode) ? 'none' : undefined }}
+                                            onMouseDown={cropMode ? (e) => { e.preventDefault(); handleCropStart(e); } : (manualBoxMode ? (e) => { e.preventDefault(); handleManualBoxStart(e); } : undefined)}
                                             onMouseMove={cropMode ? handleCropMove : (manualBoxMode ? handleManualBoxMove : undefined)}
                                             onMouseUp={cropMode ? handleCropEnd : (manualBoxMode ? handleManualBoxEnd : undefined)}
                                             onMouseLeave={cropMode ? () => setCropSelection(null) : (manualBoxMode ? () => setDrawingBox(null) : undefined)}
@@ -4895,9 +4895,11 @@
                                         className="relative flex-1 flex items-center justify-center overflow-hidden"
                                         style={{ 
                                             cursor: (manualBoxMode || cropMode) ? 'crosshair' : 'default',
-                                            touchAction: (manualBoxMode || cropMode) ? 'none' : 'auto'
+                                            touchAction: (manualBoxMode || cropMode) ? 'none' : 'auto',
+                                            userSelect: (manualBoxMode || cropMode || eraserMode) ? 'none' : undefined,
+                                            WebkitUserSelect: (manualBoxMode || cropMode || eraserMode) ? 'none' : undefined
                                         }}
-                                        onMouseDown={cropMode ? handleCropStart : (manualBoxMode ? handleManualBoxStart : undefined)}
+                                        onMouseDown={cropMode ? (e) => { e.preventDefault(); handleCropStart(e); } : (manualBoxMode ? (e) => { e.preventDefault(); handleManualBoxStart(e); } : undefined)}
                                         onMouseMove={cropMode ? handleCropMove : (manualBoxMode ? handleManualBoxMove : undefined)}
                                         onMouseUp={cropMode ? handleCropEnd : (manualBoxMode ? handleManualBoxEnd : undefined)}
                                         onTouchStart={cropMode ? (e) => { e.preventDefault(); handleCropStart(e.touches[0]); } : (manualBoxMode ? (e) => { e.preventDefault(); handleManualBoxStart(e.touches[0]); } : undefined)}
