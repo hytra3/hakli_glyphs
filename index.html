@@ -154,7 +154,7 @@
     
     <!-- ============================================ -->
     <!-- CACHE-BUSTING: When updating, change v=XXXXXX in ALL script tags below to match APP_VERSION -->
-    <!-- Current version: v260811c --> 
+    <!-- Current version: v260811d --> 
     <!-- ============================================ -->
     
     <!-- Recognition modules -->
@@ -170,18 +170,18 @@
     <script src="src/reading/transcription.js"></script>
     
     <!-- UI Components (loaded as Babel) -->
-    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811c"></script>
-    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811c"></script>
-    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811c"></script>
-    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811c"></script>
-    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811c"></script>
-    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811c"></script>
-    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811c"></script>
-    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811c"></script>
+    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811d"></script>
+    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811d"></script>
+    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811d"></script>
+    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811d"></script>
+    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811d"></script>
+    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811d"></script>
+    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811d"></script>
+    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811d"></script>
 
     <!-- Main Application -->
     <script type="text/babel">
-        const APP_VERSION = 'v260811c';
+        const APP_VERSION = 'v260811d';
         console.log('🚀 Hakli Glyph Recognizer ' + APP_VERSION + ' (Transcription Syncs with Reading Order!)');
 
         function HakliGlyphRecognizer() {
@@ -463,11 +463,13 @@
             
             // Crop mode state (one-shot operation)
             const [cropMode, setCropMode] = useState(false);
+            const [revertSnapshot, setRevertSnapshot] = useState(null); // pre-revert state for the Undo affordance
             const [cropSelection, setCropSelection] = useState(null); // { startX, startY, currentX, currentY }
             
             const [opencvReady, setOpencvReady] = useState(false);
             const originalMatRef = useRef(null);
             const pristineImageRef = useRef(null); // the originally-uploaded image, never overwritten by crop/eraser — used by Revert
+            const revertUndoTimerRef = useRef(null); // auto-dismiss timer for the "Undo revert" affordance
             const preprocessedMatRef = useRef(null);
             
             // Track dimensions of the image used for recognition (for box alignment)
@@ -1018,6 +1020,7 @@
                     setOriginalImage(dataUrl);
                     setDisplayImage(dataUrl);
                     pristineImageRef.current = dataUrl;
+                    setRevertSnapshot(null);
                     
                     if (opencvReady) {
                         try {
@@ -1181,6 +1184,18 @@
                 const pristine = pristineImageRef.current || originalImage;
                 if (!pristine) return;
 
+                // Snapshot current state so an accidental Revert can be undone.
+                const hadWork = originalImage !== pristine
+                    || preprocessing.rotation !== 0 || preprocessing.gaussianBlur !== 0
+                    || preprocessing.useAdaptiveThreshold || preprocessing.invertColors
+                    || preprocessing.morphologyOperation !== 'none';
+                const snapshot = hadWork ? {
+                    originalImage,
+                    displayImage,
+                    preprocessing: { ...preprocessing },
+                    sourceDims: recognitionSourceDims
+                } : null;
+
                 // Clear preprocessed mat
                 if (preprocessedMatRef.current) {
                     preprocessedMatRef.current.delete();
@@ -1220,8 +1235,39 @@
                 if (recognitionResults.length === 0) {
                     setRecognitionSourceDims(null);
                 }
+
+                // Offer a brief "Undo" for accidental reverts
+                setRevertSnapshot(snapshot);
+                if (revertUndoTimerRef.current) clearTimeout(revertUndoTimerRef.current);
+                if (snapshot) {
+                    revertUndoTimerRef.current = setTimeout(() => setRevertSnapshot(null), 20000);
+                }
                 console.log('↺ Reverted to original uploaded image');
-            }, [originalImage, recognitionResults.length, opencvReady]);
+            }, [originalImage, displayImage, preprocessing, recognitionSourceDims, recognitionResults.length, opencvReady]);
+
+            // Undo a revert — restore the pre-revert state captured in the snapshot
+            const undoRevert = useCallback(async () => {
+                const snap = revertSnapshot;
+                if (!snap) return;
+                if (revertUndoTimerRef.current) { clearTimeout(revertUndoTimerRef.current); revertUndoTimerRef.current = null; }
+
+                if (preprocessedMatRef.current) { preprocessedMatRef.current.delete(); preprocessedMatRef.current = null; }
+                // Rebuild the mat from the pre-revert image first
+                if (opencvReady && snap.originalImage) {
+                    try {
+                        if (originalMatRef.current) originalMatRef.current.delete();
+                        originalMatRef.current = await loadImageToMat(snap.originalImage);
+                    } catch (e) {
+                        console.error('Undo revert: failed to rebuild mat', e);
+                    }
+                }
+                setOriginalImage(snap.originalImage);
+                setDisplayImage(snap.displayImage);
+                setRecognitionSourceDims(snap.sourceDims);
+                setPreprocessing(snap.preprocessing);
+                setRevertSnapshot(null);
+                console.log('↩️ Undid revert — restored pre-revert state');
+            }, [revertSnapshot, opencvReady]);
             
             // ========== START NEW INSCRIPTION ==========
             const startNewInscription = useCallback(() => {
@@ -1241,6 +1287,7 @@
                 // Clear everything
                 setOriginalImage(null);
                 setDisplayImage(null);
+                setRevertSnapshot(null);
                 setRecognitionResults([]);
                 setValidations({});
                 setChangeLog([]);
@@ -3801,6 +3848,12 @@
                                                 title="Restore the original uploaded image — undoes crop, erase, and filters">
                                                 <span className="text-base leading-none">↺</span> Revert to original
                                             </button>
+                                            {revertSnapshot && (
+                                                <div className="mt-2 flex items-center justify-between gap-2 text-sm bg-amber-50 border border-amber-200 rounded px-2 py-2">
+                                                    <span className="text-amber-700">↺ Reverted to original</span>
+                                                    <button onClick={undoRevert} className="font-semibold text-ancient-purple">Undo</button>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -4328,6 +4381,12 @@
                                                         title="Restore the original uploaded image — undoes crop, erase, and filters">
                                                         <span className="text-base leading-none">↺</span> Revert to original
                                                     </button>
+                                                    {revertSnapshot && (
+                                                        <div className="mt-1.5 flex items-center justify-between gap-2 text-xs bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                                                            <span className="text-amber-700">↺ Reverted to original</span>
+                                                            <button onClick={undoRevert} className="font-semibold text-ancient-purple hover:underline">Undo</button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 )}
                                                 
