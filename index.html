@@ -154,7 +154,7 @@
     
     <!-- ============================================ -->
     <!-- CACHE-BUSTING: When updating, change v=XXXXXX in ALL script tags below to match APP_VERSION -->
-    <!-- Current version: v260811e --> 
+    <!-- Current version: v260811g --> 
     <!-- ============================================ -->
     
     <!-- Recognition modules -->
@@ -170,18 +170,18 @@
     <script src="src/reading/transcription.js"></script>
     
     <!-- UI Components (loaded as Babel) -->
-    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811e"></script>
-    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811e"></script>
-    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811e"></script>
-    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811e"></script>
-    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811e"></script>
-    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811e"></script>
-    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811e"></script>
-    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811e"></script>
+    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811g"></script>
+    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811g"></script>
+    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811g"></script>
+    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811g"></script>
+    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811g"></script>
+    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811g"></script>
+    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811g"></script>
+    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811g"></script>
 
     <!-- Main Application -->
     <script type="text/babel">
-        const APP_VERSION = 'v260811e';
+        const APP_VERSION = 'v260811g';
         console.log('🚀 Hakli Glyph Recognizer ' + APP_VERSION + ' (Transcription Syncs with Reading Order!)');
 
         function HakliGlyphRecognizer() {
@@ -1335,6 +1335,7 @@
                     preprocessing.gaussianBlur === 0 &&
                     !preprocessing.useAdaptiveThreshold &&
                     preprocessing.morphologyOperation === 'none' &&
+                    !preprocessing.colorIsolation &&
                     !preprocessing.invertColors;
                 
                 if (isNeutral) {
@@ -1587,9 +1588,21 @@
                     // Also update originalImage so Reset goes back to erased version
                     setOriginalImage(dataUrl);
                     
-                    // Reset rotation to 0 since it's now baked into the new original image
-                    // This prevents double-rotation on next preprocessing
-                    setPreprocessing(prev => ({ ...prev, rotation: 0 }));
+                    // The eraser bakes the fully-PROCESSED display as the new base image, so every
+                    // preprocessing step is now baked in. Reset them ALL to neutral — otherwise the
+                    // pipeline re-processes an already-processed image (e.g. Color Isolation on a now
+                    // colourless image blanks it, and threshold/rotation would double-apply).
+                    setPreprocessing({
+                        rotation: 0,
+                        useAdaptiveThreshold: false,
+                        blockSize: 11,
+                        constantOffset: 2,
+                        gaussianBlur: 0,
+                        morphologyOperation: 'none',
+                        invertColors: false,
+                        colorIsolation: false,
+                        colorStrength: 50
+                    });
                     
                     // Track dimensions
                     setRecognitionSourceDims({
@@ -3714,7 +3727,7 @@
                                                     <input type="range" min="0" max="100" value={preprocessing.colorStrength}
                                                         onChange={(e) => setPreprocessing(p => ({ ...p, colorStrength: parseInt(e.target.value) }))}
                                                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                                                    <p className="text-[10px] text-gray-400 mt-0.5">Separates red glyphs from rock. Pair with Adaptive Threshold + Morphology → Open.</p>
+                                                    <p className="text-[10px] text-gray-400 mt-0.5">Separates red glyphs from rock. Then add Morphology → Open (leave Adaptive off).</p>
                                                 </div>
                                             )}
                                             <div className="flex items-center justify-between">
@@ -4310,7 +4323,7 @@
                                                             <div className="flex justify-between text-xs text-gray-500 mb-1"><span>Strength</span><span>{preprocessing.colorStrength}</span></div>
                                                             <input type="range" min="0" max="100" value={preprocessing.colorStrength}
                                                                 onChange={(e) => setPreprocessing(p => ({ ...p, colorStrength: parseInt(e.target.value) }))} className="w-full" />
-                                                            <p className="text-[10px] text-gray-400 mt-0.5">Separates red glyphs from rock. Best paired with Adaptive Threshold + Morphology → Open.</p>
+                                                            <p className="text-[10px] text-gray-400 mt-0.5">Separates red glyphs from rock. Then add Morphology → Open to clean speckle (leave Adaptive off).</p>
                                                         </div>
                                                     )}
                                                 </div>
