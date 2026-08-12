@@ -154,7 +154,7 @@
     
     <!-- ============================================ -->
     <!-- CACHE-BUSTING: When updating, change v=XXXXXX in ALL script tags below to match APP_VERSION -->
-    <!-- Current version: v260811h --> 
+    <!-- Current version: v260811i --> 
     <!-- ============================================ -->
     
     <!-- Recognition modules -->
@@ -170,18 +170,18 @@
     <script src="src/reading/transcription.js"></script>
     
     <!-- UI Components (loaded as Babel) -->
-    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811h"></script>
-    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811h"></script>
-    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811h"></script>
-    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811h"></script>
-    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811h"></script>
-    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811h"></script>
-    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811h"></script>
-    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811h"></script>
+    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811i"></script>
+    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811i"></script>
+    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811i"></script>
+    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811i"></script>
+    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811i"></script>
+    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811i"></script>
+    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811i"></script>
+    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811i"></script>
 
     <!-- Main Application -->
     <script type="text/babel">
-        const APP_VERSION = 'v260811h';
+        const APP_VERSION = 'v260811i';
         console.log('🚀 Hakli Glyph Recognizer ' + APP_VERSION + ' (Transcription Syncs with Reading Order!)');
 
         function HakliGlyphRecognizer() {
@@ -4517,13 +4517,12 @@
                                                 <div className="flex items-center gap-1 bg-white/90 rounded-lg shadow px-2 py-1">
                                                     <button onClick={() => setCanvasZoom(z => Math.max(0.5, z - 0.25))} 
                                                         className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-sm font-bold" title="Zoom out">−</button>
-                                                    <span className="text-xs w-12 text-center font-medium">{Math.round(canvasZoom * 100)}%</span>
+                                                    <span className="text-xs w-12 text-center font-medium" style={{ fontVariantNumeric: 'tabular-nums' }}>{Math.round(canvasZoom * 100)}%</span>
                                                     <button onClick={() => setCanvasZoom(z => Math.min(3, z + 0.25))} 
                                                         className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-sm font-bold" title="Zoom in">+</button>
-                                                    {canvasZoom !== 1 && (
-                                                        <button onClick={() => setCanvasZoom(1)} 
-                                                            className="w-6 h-6 rounded bg-gray-200 hover:bg-gray-300 text-xs" title="Reset zoom">⟲</button>
-                                                    )}
+                                                    {/* Reset always occupies its slot (invisible at 100%) so + / − never shift */}
+                                                    <button onClick={() => setCanvasZoom(1)} tabIndex={canvasZoom === 1 ? -1 : 0}
+                                                        className={`w-6 h-6 rounded text-xs ${canvasZoom !== 1 ? 'bg-gray-200 hover:bg-gray-300' : 'invisible'}`} title="Reset zoom">⟲</button>
                                                 </div>
                                             </div>
                                             

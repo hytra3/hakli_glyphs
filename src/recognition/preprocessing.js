@@ -161,10 +161,16 @@ const Preprocessing = {
         b.delete();
         channels.delete();
 
+        // Light median blur knocks down salt-and-pepper speckle from rock texture before
+        // thresholding (median is purpose-built for that, and preserves glyph edges).
+        const denoised = new cv.Mat();
+        cv.medianBlur(stretched, denoised, 3);
+        stretched.delete();
+
         // Red pigment is now bright; invert so pigment is dark (ink-on-light convention)
         const out = new cv.Mat();
-        cv.bitwise_not(stretched, out);
-        stretched.delete();
+        cv.bitwise_not(denoised, out);
+        denoised.delete();
         return out;
     },
 
