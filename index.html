@@ -154,7 +154,7 @@
     
     <!-- ============================================ -->
     <!-- CACHE-BUSTING: When updating, change v=XXXXXX in ALL script tags below to match APP_VERSION -->
-    <!-- Current version: v260811g --> 
+    <!-- Current version: v260811h --> 
     <!-- ============================================ -->
     
     <!-- Recognition modules -->
@@ -170,18 +170,18 @@
     <script src="src/reading/transcription.js"></script>
     
     <!-- UI Components (loaded as Babel) -->
-    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811g"></script>
-    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811g"></script>
-    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811g"></script>
-    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811g"></script>
-    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811g"></script>
-    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811g"></script>
-    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811g"></script>
-    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811g"></script>
+    <script type="text/babel" src="src/components/common/CommonComponents.jsx?v=260811h"></script>
+    <script type="text/babel" src="src/components/common/DetectionCard.jsx?v=260811h"></script>
+    <script type="text/babel" src="src/components/panels/InscriptionPanel.jsx?v=260811h"></script>
+    <script type="text/babel" src="src/components/panels/ExportPanel.jsx?v=260811h"></script>
+    <script type="text/babel" src="src/components/common/AccessControlUI.jsx?v=260811h"></script>
+    <script type="text/babel" src="src/components/modals/WarehouseModal.jsx?v=260811h"></script>
+    <script type="text/babel" src="src/components/modals/CollaboratorManager.jsx?v=260811h"></script>
+    <script type="text/babel" src="src/components/modals/BookletGenerator.jsx?v=260811h"></script>
 
     <!-- Main Application -->
     <script type="text/babel">
-        const APP_VERSION = 'v260811g';
+        const APP_VERSION = 'v260811h';
         console.log('🚀 Hakli Glyph Recognizer ' + APP_VERSION + ' (Transcription Syncs with Reading Order!)');
 
         function HakliGlyphRecognizer() {
@@ -1698,26 +1698,24 @@
             
             // Initialize eraser canvas when mode is enabled
             useEffect(() => {
-                if (eraserMode) {
-                    // Simple retry logic - initEraserCanvas finds canvas via DOM query
-                    const initWithRetry = (attempt = 0) => {
-                        setTimeout(() => {
-                            console.log('🧹 Attempt', attempt + 1, 'to initialize eraser canvas...');
-                            
-                            // Call initEraserCanvas - it will find the visible canvas via DOM query
-                            const success = initEraserCanvas();
-                            
-                            if (!success && attempt < 10) {
-                                console.warn('⚠️ Init failed, retrying...');
-                                initWithRetry(attempt + 1);
-                            } else if (success) {
-                                console.log('🎉 Eraser canvas ready!');
-                            }
-                        }, attempt === 0 ? 300 : 400);
-                    };
-                    
-                    initWithRetry();
-                }
+                if (!eraserMode) return;
+                let cancelled = false;
+                let timer = null;
+                // Retry logic - initEraserCanvas finds canvas via DOM query (it may not be
+                // rendered yet). Cancelled on cleanup so overlapping/stale chains don't pile up.
+                const initWithRetry = (attempt = 0) => {
+                    timer = setTimeout(() => {
+                        if (cancelled) return;
+                        const success = initEraserCanvas();
+                        if (!success && attempt < 10) {
+                            initWithRetry(attempt + 1);
+                        } else if (success) {
+                            console.log('🎉 Eraser canvas ready!');
+                        }
+                    }, attempt === 0 ? 300 : 400);
+                };
+                initWithRetry();
+                return () => { cancelled = true; if (timer) clearTimeout(timer); };
             }, [eraserMode, initEraserCanvas, displayImage]);
             
             // ========== BOX ADJUSTMENT ==========
