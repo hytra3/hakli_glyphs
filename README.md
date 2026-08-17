@@ -13,7 +13,7 @@
 
 The Hakli Glyph Recognizer is a browser-based tool for field documentation of ancient South Arabian inscriptions found in Dhofar, Oman. It uses computer vision (OpenCV.js) to detect and identify glyphs in inscription photographs, with full offline capability, Google Drive collaboration, and PDF booklet export for community review.
 
-Built on the decipherment work of Ahmad Al-Jallad. Developed during active fieldwork with Jibbali/Hakli-speaking communities in Salalah, Dhofar.
+Built on the decipherment work of Ahmad Al-Jallad. Developed during active fieldwork with Hakli-speaking communities in Salalah, Dhofar.
 
 **Live app:** [hudhud.dev](https://hudhud.dev)  
 **Repository:** [github.com/hytra3/hakli_glyph_recognizer](https://github.com/hytra3/hakli_glyph_recognizer)
