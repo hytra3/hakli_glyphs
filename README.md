@@ -185,9 +185,9 @@ This tool is designed for linguistic and epigraphic fieldwork:
 
 **Author:** marty heaton (© hudhud holdings)  
 **Purpose:** Documenting endangered Dhofari script  
-**Language:** Jibbali/Hakli (Modern South Arabian, Semitic)  
+**Language:** Hakli (Modern South Arabian, Semitic)  
 **Location:** Dhofar, Oman  
-**Fieldwork:** Salalah, January–June 2026
+**Fieldwork:** Salalah, January–March 2026
 
 Based on Al-Jallad's decipherment of ancient Dhofari script.
 
